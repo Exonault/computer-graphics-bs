@@ -22,6 +22,8 @@ void drawPyramid(GLuint);
 void close();
 void handleKeyUp(const SDL_KeyboardEvent& key);
 void drawRoom();
+void drawRoom1();
+glm::mat4 generateDefaultModelMatrix(glm::mat4);
 
 SDL_Window* gWindow = NULL;
 SDL_GLContext gContext;
@@ -30,7 +32,7 @@ GLuint gVertexArrayObjectCube;
 
 Shader shader;
 
-glm::vec3 translation = glm::vec3(0.0f);
+glm::vec3 eyes = glm::vec3(7, 2, 15);
 
 int main(int argc, char* args[])
 {
@@ -81,19 +83,23 @@ void handleKeyUp(const SDL_KeyboardEvent& key)
 	switch (key.keysym.sym)
 	{
 	case SDLK_LEFT:
-		translation.x -= 0.5f;
+		eyes.x -= 1.0f;
 		break;
 
 	case SDLK_RIGHT:
-		translation.x += 0.5f;
+		eyes.x += 1.0f;
 		break;
 
 	case SDLK_UP:
-		translation.z += 0.5f;
+		eyes.y += 1.0f;
 		break;
 
 	case SDLK_DOWN:
-		translation.z -= 0.5f;
+		eyes.y -= 1.0f;
+		break;
+
+	case SDLK_q:
+		eyes = glm::vec3(7, 12, 15);
 		break;
 	}
 }
@@ -203,7 +209,13 @@ void render()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	drawRoom();
+	glm::mat4 projection = glm::perspective(glm::radians(60.0), 4.0 / 3.0, 1.0, 100.0);
+	glm::mat4 view = glm::lookAt(eyes, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+
+	shader.setMat4("projection", projection);
+	shader.setMat4("view", view);
+
+	drawRoom1();
 
 	//glm::mat4 projection = glm::perspective(glm::radians(30.0), 4.0 / 3.0, 0.1, 100.0);
 	//glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 5), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -231,18 +243,44 @@ void render()
 
 }
 
+void drawRoom1()
+{
+	glm::mat4 model = glm::mat4(1.0f);
+	
+	//floor
+	model = glm::scale(model, glm::vec3(5, 0.1, 7));
+	model = glm::translate(model, glm::vec3(-1, -5, 0));
+	model = generateDefaultModelMatrix(model);
+
+	shader.setVec3("color", glm::vec3(0, 0, 1));
+	shader.setMat4("model", model);
+	drawCube(gVertexArrayObjectCube);
+
+	//ceiling
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-2, 5.1, 0));
+	model = glm::scale(model, glm::vec3(5, 0.1, 7));
+	model = generateDefaultModelMatrix(model);
+
+	shader.setVec3("color", glm::vec3(0, 1, 0));
+	shader.setMat4("model", model);
+	drawCube(gVertexArrayObjectCube);
+
+}
+
 void drawRoom() {
-	glm::mat4 projection = glm::perspective(glm::radians(30.0), 4.0 / 3.0, 0.1, 100.0);
+
+	glm::mat4 projection = glm::perspective(glm::radians(60.0), 4.0 / 3.0, 0.1, 100.0);
 	glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 5), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 	glm::mat4 model = glm::mat4(1.0f);
 
 	shader.setMat4("projection", projection);
 	shader.setMat4("view", view);
 
-	model = glm::translate(model, translation);
+	//model = glm::translate(model, translation);
 	model = glm::scale(model, glm::vec3(3.0f, 0.1f, 7.0f));
 	model = glm::translate(model, glm::vec3(0.0f, -6.0f, 0.0f));
-	
+
 	shader.setMat4("model", model);
 	shader.setVec3("color", glm::vec3(1, 1, 1));
 	drawCube(gVertexArrayObjectCube);
@@ -251,7 +289,7 @@ void drawRoom() {
 	//  glScalef(5, 0.1, 7);
 	//model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, -1.0f));
 	model = glm::mat4(1);
-	model = glm::translate(model, translation);
+	//model = glm::translate(model, translation);
 	model = glm::translate(model, glm::vec3(-2.3f, 0.0f, -4.0f));
 	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, -1.0f));
 	model = glm::scale(model, glm::vec3(3.0f, 0.1f, 13.0f));
@@ -391,4 +429,12 @@ void drawCube(GLuint vertexArrayObjectId) {
 
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 	glBindVertexArray(0);
+}
+
+glm::mat4 generateDefaultModelMatrix(glm:: mat4 model)
+{
+	model = glm::translate(model, glm::vec3(1.5f, 1.5f, 1.5f));
+	model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
+
+	return model;
 }
