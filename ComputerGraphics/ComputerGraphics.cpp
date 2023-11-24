@@ -16,14 +16,15 @@ bool init();
 bool initGL();
 void render();
 GLuint createCube();
-void drawCube(GLuint);
+void drawCube();
 GLuint createPyramid();
 void drawPyramid(GLuint);
 void close();
 void handleKeyUp(const SDL_KeyboardEvent& key);
 void drawRoom();
-void drawRoom1();
+void drawBed();
 glm::mat4 generateDefaultModelMatrix(glm::mat4);
+
 
 SDL_Window* gWindow = NULL;
 SDL_GLContext gContext;
@@ -32,7 +33,9 @@ GLuint gVertexArrayObjectCube;
 
 Shader shader;
 
-glm::vec3 eyes = glm::vec3(7, 2, 15);
+glm::vec3 eyes = glm::vec3(7.0f, 2.0f, 15.0f);
+glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
 int main(int argc, char* args[])
 {
@@ -99,7 +102,8 @@ void handleKeyUp(const SDL_KeyboardEvent& key)
 		break;
 
 	case SDLK_q:
-		eyes = glm::vec3(7, 12, 15);
+		eyes = glm::vec3(7.0f, 2.0f, 15.0f);
+		center = glm::vec3(0.0f, 0.0f, 0.0f);
 		break;
 	}
 }
@@ -182,11 +186,13 @@ bool initGL()
 	gVertexArrayObjectCube = createCube();
 
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	glCullFace(GL_FRONT);
 
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
 
 	return success;
 }
@@ -207,54 +213,64 @@ void close()
 
 void render()
 {
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glm::mat4 projection = glm::perspective(glm::radians(60.0), 4.0 / 3.0, 1.0, 100.0);
-	glm::mat4 view = glm::lookAt(eyes, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	glm::mat4 projection = glm::perspective(glm::radians(60.0f), 4.0f / 3.0f, 1.0f, 100.0f);
+	glm::mat4 view = glm::lookAt(eyes, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	shader.setMat4("projection", projection);
 	shader.setMat4("view", view);
 
-	drawRoom1();
-
-	//glm::mat4 projection = glm::perspective(glm::radians(30.0), 4.0 / 3.0, 0.1, 100.0);
-	//glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 5), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-	//glm::mat4 model = glm::mat4(1.0f);
-	//model = glm::scale(model, glm::vec3(0.8f, 0.8f, 0.8f));
-	//model = glm::translate(model, glm::vec3(-1.0f, 0.0f, 0.0f));
-	//model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	//shader.setMat4("projection", projection);
-	//shader.setMat4("view", view);
-	//shader.setMat4("model", model);
-	//shader.setVec3("color", glm::vec3(0, 1, 0));
-	//drawPyramid(gVertexArrayObjectPyramid);
-	//drawCube(gVertexArrayObjectCube);
-	//model = glm::mat4(1.0f);
-	//model = glm::translate(model, glm::vec3(2.0f, 0.0f, -95.0f));
-	//glScalef(5, 0.1, 7);
-	//glTranslatef(-1, -5, 0);
-	//model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	//model = glm::translate(model, translation);
-	//model = glm::scale(model,glm::vec3(3.0f, 0.1f, 7.0f));
-	//model = glm::translate(model, glm::vec3(0.0f, -6.0f, 0.0f));
-	//shader.setMat4("model", model);
-	//shader.setVec3("color", glm::vec3(1, 1, 1));
-	//drawCube(gVertexArrayObjectCube);
+	drawRoom();
+	
+	drawBed();
 
 }
 
-void drawRoom1()
+void drawRoom()
 {
-	glm::mat4 model = glm::mat4(1.0f);
+	glm::mat4 model;
 	
 	//floor
+	model = glm::mat4(1.0f);
 	model = glm::scale(model, glm::vec3(5, 0.1, 7));
 	model = glm::translate(model, glm::vec3(-1, -5, 0));
 	model = generateDefaultModelMatrix(model);
 
-	shader.setVec3("color", glm::vec3(0, 0, 1));
+	shader.setVec4("color", glm::vec4(0, 0, 1,1));
 	shader.setMat4("model", model);
-	drawCube(gVertexArrayObjectCube);
+	drawCube();
+
+	//front wall
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-1.5f, -1.0f, 0.5f));
+	model = glm::scale(model, glm::vec3(5.0f, 2.0f, 0.1f));
+	model = generateDefaultModelMatrix(model);
+
+	shader.setVec4("color", glm::vec4(1, 1, 1,1));
+	shader.setMat4("model", model);
+	drawCube();
+
+	//right wall
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(8.0f, -1.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(0.2f, 2.0f, 5.0f));
+	model = generateDefaultModelMatrix(model);
+
+	shader.setVec4("color", glm::vec4(1, 0, 0,1));
+	shader.setMat4("model", model);
+	drawCube();
+
+	//left wall
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-4.5f, -1.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(1.0f, 2.0f, 5.0f));
+	model = generateDefaultModelMatrix(model);
+
+	shader.setVec4("color", glm::vec4(1, 1, 0, 1));
+	shader.setMat4("model", model);
+	drawCube();
+
 
 	//ceiling
 	model = glm::mat4(1.0f);
@@ -262,42 +278,96 @@ void drawRoom1()
 	model = glm::scale(model, glm::vec3(5, 0.1, 7));
 	model = generateDefaultModelMatrix(model);
 
-	shader.setVec3("color", glm::vec3(0, 1, 0));
+	shader.setVec4("color", glm::vec4(0, 1, 0, 1));
 	shader.setMat4("model", model);
-	drawCube(gVertexArrayObjectCube);
+	drawCube();
 
+	//carpet
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(3.0f, -0.2f, 7.0f));
+	model = glm::scale(model, glm::vec3(1.3f, 0.01f, 1.7f));
+	model = generateDefaultModelMatrix(model);
+
+	shader.setVec4("color", glm::vec4(0.439f, 0.125f, 0.063f, 1.0f));
+	shader.setMat4("model", model);
+	drawCube();
 }
 
-void drawRoom() {
+void drawBed()
+{
+	glm::mat4 model;
 
-	glm::mat4 projection = glm::perspective(glm::radians(60.0), 4.0 / 3.0, 0.1, 100.0);
-	glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 5), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-	glm::mat4 model = glm::mat4(1.0f);
-
-	shader.setMat4("projection", projection);
-	shader.setMat4("view", view);
-
-	//model = glm::translate(model, translation);
-	model = glm::scale(model, glm::vec3(3.0f, 0.1f, 7.0f));
-	model = glm::translate(model, glm::vec3(0.0f, -6.0f, 0.0f));
+	//headboard
+	model = glm::mat4(1.0f);
+	model = glm::scale(model, glm::vec3(0.1f, 0.5f, 0.9f));
+	model = glm::translate(model, glm::vec3(-2.0f, -0.5f, 6.2f));
+	model = generateDefaultModelMatrix(model);
 
 	shader.setMat4("model", model);
-	shader.setVec3("color", glm::vec3(1, 1, 1));
-	drawCube(gVertexArrayObjectCube);
+	shader.setVec4("color", glm::vec4(0.502f, 0.38f, 0.149f, 1.0f));
+	drawCube();
+	
+	//body
+	model = glm::mat4(1.0f);
+	model = glm::scale(model, glm::vec3(1.0f, 0.2f, 0.9f));
+	model = glm::translate(model, glm::vec3(0.0f, -0.5f, 6.2f));
+	model = generateDefaultModelMatrix(model);
 
-	//  glTranslatef(-2,5.1,0);
-	//  glScalef(5, 0.1, 7);
-	//model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.502f, 0.38f, 0.149f, 1.0f));
+	drawCube();
+
+	//right pillow
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.5f, 0.5f, 6.0f));
+	model = glm::rotate(model, glm::radians(20.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	model = glm::scale(model, glm::vec3(0.1f, 0.15f, 0.28f));
+	model = generateDefaultModelMatrix(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.729f, 0.278f, 0.031f, 1.0f));
+	drawCube();
+
+	//left pillow
 	model = glm::mat4(1);
-	//model = glm::translate(model, translation);
-	model = glm::translate(model, glm::vec3(-2.3f, 0.0f, -4.0f));
-	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, -1.0f));
-	model = glm::scale(model, glm::vec3(3.0f, 0.1f, 13.0f));
-	model = glm::translate(model, glm::vec3(0.0f, -6.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(0.5f, 0.5f, 7.2f));
+	model = glm::rotate(model, glm::radians(22.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	model = glm::scale(model, glm::vec3(0.1f, 0.15f, 0.28f));
+	model = generateDefaultModelMatrix(model);
 
 	shader.setMat4("model", model);
-	shader.setVec3("color", glm::vec3(0, 0, 1));
-	drawCube(gVertexArrayObjectCube);
+	shader.setVec4("color", glm::vec4(0.729f, 0.278f, 0.031f, 1.0f));
+	drawCube();
+
+	//blanket
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(1.4f, 0.45f, 5.5f));
+	model = glm::scale(model, glm::vec3(0.5f, 0.05f, 0.95f));
+	model = generateDefaultModelMatrix(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.729f, 0.424f, 0.031f, 1.0f));
+	drawCube();
+
+	//blanket left side
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(1.4f, -0.3f, 8.2f));
+	model = glm::scale(model, glm::vec3(0.5f, 0.25f, 0.05f));
+	model = generateDefaultModelMatrix(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.729f, 0.424f, 0.031f, 1.0f));
+	drawCube();
+
+	//blanket right side TODO
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(1.4f, -0.3f, 5.5f));
+	model = glm::scale(model, glm::vec3(0.5f, 0.25f, 0.05f));
+	model = generateDefaultModelMatrix(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.729f, 0.424f, 0.031f, 1.0f));
+	drawCube();
 }
 
 GLuint createPyramid()
@@ -424,8 +494,8 @@ GLuint createCube() {
 	return 0;
 }
 
-void drawCube(GLuint vertexArrayObjectId) {
-	glBindVertexArray(vertexArrayObjectId);
+void drawCube() {
+	glBindVertexArray(gVertexArrayObjectCube);
 
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 	glBindVertexArray(0);
