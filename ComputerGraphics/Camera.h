@@ -18,7 +18,7 @@ enum Camera_Movement {
 // Default camera values
 const float YAW = -90.0f;
 const float PITCH = 0.0f;
-const float SPEED = 2.5f;
+const float SPEED = 20.0f;
 const float SENSITIVITY = 0.1f;
 const float ZOOM = 60.0f;
 
@@ -64,6 +64,7 @@ public:
 	glm::mat4 GetViewMatrix()
 	{
 		return glm::lookAt(Position, Position + Front, Up);
+		//return glm::lookAt(Position, glm::vec3(0, 0, 0), Up);
 	}
 
 	// Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)

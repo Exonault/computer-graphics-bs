@@ -5,6 +5,9 @@
 #include <gl/GLU.h>
 #include <glm/glm.hpp>
 #include "Shader.h"
+#include "Camera.h"
+#include "glm/ext.hpp"
+#include "glm/gtx/string_cast.hpp"
 
 #define STD_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -17,7 +20,10 @@ bool init();
 bool initGL();
 void render();
 void close();
-void handleKeyUp(const SDL_KeyboardEvent& key);
+void handleKeyDown(const SDL_KeyboardEvent&);
+void handleMouseMotion(const SDL_MouseMotionEvent&);
+void handleMouseWheel(const SDL_MouseWheelEvent&);
+
 
 //objects function
 GLuint createCube();
@@ -49,12 +55,23 @@ GLuint gVertexArrayObjectCube;
 
 Shader shader;
 
-glm::vec3 eyes = glm::vec3(7.0f, 2.0f, 15.0f);
-glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
-const glm::vec3 ceilingLightPosition = glm::vec3(5.5f, 5.5f, 8.0f);
+//const glm::vec3 eyes = glm::vec3(7.0f, 2.0f, 15.0f);
+const glm::vec3 eyes = glm::vec3(4.0f, 2.0f, 14.0f);
+//glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
+//glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+
+const glm::vec3 ceilingLightPosition = glm::vec3(5.5f, 5.5f, 7.0f);
 const glm::vec3 nighStandLampLightPosition = glm::vec3(0.7f, 1.1f, 9.0f);
+
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
+float lastX = -1;
+float lastY = -1;
+bool firstMouse = true;
+
+Camera camera(eyes);
 
 int main(int argc, char* args[])
 {
@@ -63,6 +80,11 @@ int main(int argc, char* args[])
 	bool quit = false;
 	while (!quit)
 	{
+
+		float currentFrame = SDL_GetTicks() / 1000.0f;
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+
 		while (SDL_PollEvent(&event) != 0)
 		{
 			if (event.type == SDL_QUIT)
@@ -75,15 +97,21 @@ int main(int argc, char* args[])
 			case SDL_QUIT:
 				quit = true;
 				break;
-			case SDL_KEYUP:
+			case SDL_KEYDOWN:
 				if (event.key.keysym.sym == SDLK_ESCAPE)
 				{
 					quit = true;
 				}
 				else
 				{
-					handleKeyUp(event.key);
+					handleKeyDown(event.key);
 				}
+				break;
+			case SDL_MOUSEMOTION:
+				handleMouseMotion(event.motion);
+				break;
+			case SDL_MOUSEWHEEL:
+				handleMouseWheel(event.wheel);
 				break;
 			}
 
@@ -100,38 +128,46 @@ int main(int argc, char* args[])
 }
 
 
-void handleKeyUp(const SDL_KeyboardEvent& key)
+void handleKeyDown(const SDL_KeyboardEvent& key)
 {
 	switch (key.keysym.sym)
 	{
 	case SDLK_a:
-		eyes.x -= 1.0f;
+		//eyes.x -= 1.0f;
+		camera.ProcessKeyboard(LEFT, deltaTime);
 		break;
 
 	case SDLK_d:
-		eyes.x += 1.0f;
+		//eyes.x += 1.0f;
+		camera.ProcessKeyboard(RIGHT, deltaTime);
 		break;
 
 	case SDLK_w:
-		eyes.z -= 1.0f;
+		//eyes.z -= 1.0f;
+		camera.ProcessKeyboard(FORWARD, deltaTime);
 		break;
 
 	case SDLK_s:
-		eyes.z += 1.0f;
+		//eyes.z += 1.0f;
+		camera.ProcessKeyboard(BACKWARD, deltaTime);
 		break;
 
 	case SDLK_q:
-		eyes = glm::vec3(7.0f, 2.0f, 15.0f);
-		center = glm::vec3(0.0f, 0.0f, 0.0f);
+		camera = Camera(eyes);
 		break;
 
-	case SDLK_UP:
+	/*case SDLK_q:
+		eyes = glm::vec3(7.0f, 2.0f, 15.0f);
+		center = glm::vec3(0.0f, 0.0f, 0.0f);
+		break;*/
+
+	/*case SDLK_UP:
 		eyes.y += 1.0f;
 		break;
 
 	case SDLK_DOWN:
 		eyes.y -= 1.0f;
-		break;
+		break;*/
 
 
 	/*case SDLK_1:
@@ -141,6 +177,26 @@ void handleKeyUp(const SDL_KeyboardEvent& key)
 		break;*/
 	}
 }
+
+void handleMouseMotion(const SDL_MouseMotionEvent& motion) {
+	if (firstMouse)
+	{
+		lastX = motion.x;
+		lastY = motion.y;
+		firstMouse = false;
+	}
+	else
+	{
+		camera.ProcessMouseMovement(motion.x - lastX, lastY - motion.y);
+		lastX = motion.x;
+		lastY = motion.y;
+	}
+}
+
+void handleMouseWheel(const SDL_MouseWheelEvent& wheel) {
+	camera.ProcessMouseScroll(wheel.y);
+}
+
 
 bool init()
 {
@@ -251,11 +307,15 @@ void render()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glm::mat4 projection = glm::perspective(glm::radians(60.0f), 1.0f, 1.0f, 100.0f);
-	glm::mat4 view = glm::lookAt(eyes, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 4.0f/3.0f, 1.0f, 100.0f);
+	//glm::mat4 view = glm::lookAt(eyes, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 view = camera.GetViewMatrix();
 	glm::mat4 model = glm::mat4(1);
 
 	glm::mat3 normalMat = glm::transpose(glm::inverse(model));
+
+	//std::cout << "View " << glm::to_string(view) << std::endl;
+	//std::cout << "View1 " << glm::to_string(view1) << std::endl;
 
 	shader.setMat4("projection", projection);
 	shader.setMat4("view", view);
@@ -307,7 +367,7 @@ void drawRoom()
 
 	//right wall
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(8.0f, -1.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(9.0f, -1.0f, 0.0f));
 	model = glm::scale(model, glm::vec3(0.2f, 2.0f, 5.0f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -319,6 +379,16 @@ void drawRoom()
 	model = glm::mat4(1.0f);
 	model = glm::translate(model, glm::vec3(-4.5f, -1.0f, 0.0f));
 	model = glm::scale(model, glm::vec3(1.0f, 2.0f, 5.0f));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setVec4("color", glm::vec4(0.949, 0.651, 0.502, 1));
+	shader.setMat4("model", model);
+	drawCube();
+
+	//back wall
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-1.5f, -1.0f, 14.5f));
+	model = glm::scale(model, glm::vec3(5.0f, 2.0f, 0.1f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setVec4("color", glm::vec4(0.949, 0.651, 0.502, 1));
@@ -670,6 +740,138 @@ void drawShelfs() {
 }
 
 void drawMirrorTable() {
+	glm::mat4 model;
+
+	//left drawer
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(5.9, 0, 4.6));
+	model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.2725, 0.1355, 0.0375, 1.0));
+
+	drawCube();
+
+	//right drawer
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(7, 0, 4.6));
+	model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.2725, 0.1355, 0.0375, 1.0));
+	drawCube();
+
+	//middle drawer
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(5.9, 0.6, 4.6));
+	model = glm::scale(model, glm::vec3(0.57, 0.1, 0.2));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.2725, 0.1355, 0.0375, 1.0));
+	drawCube();
+
+	//middle drawer bottom stripe
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(5.9, 0.6, 5.2));
+	model = glm::scale(model, glm::vec3(0.57, 0.01, 0.0001));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+	drawCube();
+
+	//middle drawer top stripe
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(5.9, 0.9, 5.2));
+	model = glm::scale(model, glm::vec3(0.57, 0.01, 0.0001));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+	drawCube();
+
+	//middle drawer handle
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(6.5, 0.75, 5.2));
+	model = glm::scale(model, glm::vec3(0.16, 0.02, 0.0001));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+	drawCube();
+
+	//left body handle
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(6.4, 0.1, 5.2));
+	model = glm::scale(model, glm::vec3(0.02, 0.13, 0.0001));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+	drawCube();
+
+	//right body handle
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(7.1, 0.1, 5.2));
+	model = glm::scale(model, glm::vec3(0.02, 0.13, 0.0001));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+	drawCube();
+
+	// mirror
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(6.2, 0.9, 4.7));
+	model = glm::scale(model, glm::vec3(0.36, 0.5, 0.0001));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.345, 0.439, 0.451, 10.0));
+	drawCube();
+
+	//mirror left stripe
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(6.17, 0.9, 4.71));
+	model = glm::scale(model, glm::vec3(0.019, 0.49, 0.0001));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+	drawCube();
+
+	//mirror right stripe
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(7.25, 0.9, 4.71));
+	model = glm::scale(model, glm::vec3(0.019, 0.49, 0.0001));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+	drawCube();
+
+	//mirror bottom stripe 
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(6.17, 0.9, 4.71));
+	model = glm::scale(model, glm::vec3(0.36, 0.019, 0.0001));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+	drawCube();
+
+	//mirror top stripe
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(6.17, 2.35, 4.71));
+	model = glm::scale(model, glm::vec3(0.379, 0.019, 0.0001));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+	drawCube();
 
 }
 
@@ -714,7 +916,7 @@ void drawNightStandLamp() {
 void drawCeilingLight() {
 	glm::mat4 model = glm::mat4(1);
 
-	model = glm::translate(model, glm::vec3(5.0f, 5.0f, 7.5f));
+	model = glm::translate(model, glm::vec3(5.0f, 5.0f, 6.5f));
 	model = glm::scale(model, glm::vec3(0.3, 0.03, 0.3));
 	model = generateDefaultModelMatrixCube(model);
 
