@@ -64,7 +64,6 @@ public:
 	glm::mat4 GetViewMatrix()
 	{
 		return glm::lookAt(Position, Position + Front, Up);
-		//return glm::lookAt(Position, glm::vec3(0, 0, 0), Up);
 	}
 
 	// Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)

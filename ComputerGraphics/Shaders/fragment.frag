@@ -1,5 +1,6 @@
 #version 330 core
 struct Material {
+    vec3 emission;
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;    
@@ -14,16 +15,63 @@ struct Light {
     vec3 diffuse; //the color of the light
 };
 
+vec3 getAmbient(Material);
+vec3 getDiffuse(Material, Light);
+vec3 getSpecular(Material, Light);
+
 
 out vec4 FragColor;
-uniform vec4 color;
+uniform vec4 color; //Test 
+
+in vec3 FragPos;  
+in vec3 Normal;  
+  
+uniform vec3 viewPos;
+
+uniform Material fragMaterial;
+
+uniform Light ceilingLampLight;
+uniform Light nightLampLight;
+
+uniform bool ceilingLampStatus;
+uniform bool nightLampStatus;
+
+
 
 void main()
 {
-	FragColor = color;
+    vec3 ambient = getAmbient(fragMaterial);
+    
+    vec3 diffuseCeilingLampLight = getDiffuse(fragMaterial,ceilingLampLight);
+    vec3 specularCeilingLampLight = getSpecular(fragMaterial, ceilingLampLight);
+
+    vec3 diffuseNightLampLight = getDiffuse(fragMaterial,nightLampLight);
+    vec3 specularNightLampLight = getSpecular(fragMaterial, nightLampLight);
+
+    if(!ceilingLampStatus)
+    {
+        diffuseCeilingLampLight = vec3(0.0f,0.0f,0.0f);
+        specularCeilingLampLight = vec3(0.0f,0.0f,0.0f);
+    }
+
+    if(!nightLampStatus)
+    {
+        diffuseNightLampLight = vec3(0.0f,0.0f,0.0f);
+        specularNightLampLight = vec3(0.0f,0.0f,0.0f);
+    }
+   
+   vec3 result = fragMaterial.emission + ambient + 
+   diffuseCeilingLampLight + specularCeilingLampLight +
+   diffuseNightLampLight + specularNightLampLight;
+
+   FragColor = vec4(result, 1.0f);
+
+    //FragColor = vec4(ambient, 1.0f);
+    //FragColor = vec4(result, 1.0f);
+	//FragColor = color;
 }
 
-/*
+
 vec3 getAmbient(Material material)
 {
     vec3 ambient = material.ka * material.ambient;
@@ -54,4 +102,4 @@ vec3 getSpecular(Material material, Light light)
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess); 
     vec3 specular = material.ks * (spec * material.specular);  
     return specular;
-}*/
+}
