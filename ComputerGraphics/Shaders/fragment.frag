@@ -15,6 +15,18 @@ struct Light {
     vec3 diffuse; //the color of the light
 };
 
+
+/*struct Spotlight {
+    vec3 position;  
+    vec3 direction;
+
+    float cutOff;
+    float outerCutOff;
+  
+    vec3 diffuse;
+};*/
+
+
 vec3 getAmbient(Material);
 vec3 getDiffuse(Material, Light);
 vec3 getSpecular(Material, Light);
@@ -36,7 +48,9 @@ uniform Light nightLampLight;
 uniform bool ceilingLampStatus;
 uniform bool nightLampStatus;
 
-
+uniform vec3 nightLampLightDirection;
+uniform float nightLampLightCutOff;
+uniform float nightLampLightOuterCutOff;
 
 void main()
 {
@@ -54,7 +68,17 @@ void main()
         specularCeilingLampLight = vec3(0.0f,0.0f,0.0f);
     }
 
-    if(!nightLampStatus)
+    if(nightLampStatus)
+    {
+        vec3 lightDirection = normalize(nightLampLight.position - FragPos);
+        float theta = dot(lightDirection, normalize(-nightLampLightDirection));
+        float epsilon = (nightLampLightCutOff - nightLampLightOuterCutOff);
+        float intensity = clamp((theta - nightLampLightOuterCutOff) / epsilon, 0.0, 1.0);
+            
+        diffuseNightLampLight *= intensity;
+        specularNightLampLight *= intensity;
+    }
+    else
     {
         diffuseNightLampLight = vec3(0.0f,0.0f,0.0f);
         specularNightLampLight = vec3(0.0f,0.0f,0.0f);

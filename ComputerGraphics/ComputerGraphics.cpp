@@ -43,7 +43,7 @@ void drawCube();
 
 //helper functions
 glm::mat4 generateDefaultModelMatrixCube(glm::mat4);
-void setMaterialValues(glm::vec3, glm::vec3, glm::vec3 = glm::vec3(0.0f,0.0f,0.0f));
+void setMaterialValues(glm::vec3, glm::vec3, glm::vec3 = glm::vec3(0.0f,0.0f,0.0f), float = 0.2f * 128);
 
 SDL_Window* gWindow = NULL;
 SDL_GLContext gContext;
@@ -52,10 +52,12 @@ GLuint gVertexArrayObjectCube;
 
 Shader shader;
 
-const glm::vec3 eyes = glm::vec3(4.0f, 2.0f, 13.5f);
+const glm::vec3 eyes = glm::vec3(4.0f, 2.0f, 13.75f);
 
 const glm::vec3 ceilingLightPosition = glm::vec3(5.5f, 5.0f, 7.0f);
-const glm::vec3 nighStandLampLightPosition = glm::vec3(0.7f, 1.1f, 9.0f);
+const glm::vec3 nightLampLightPosition = glm::vec3(0.7f, 1.1f, 9.0f);
+
+const glm::vec3 nightLampLightDirection = glm::vec3(0.3f, -1.0f, -0.8f);
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -129,22 +131,18 @@ void handleKeyDown(const SDL_KeyboardEvent& key)
 	switch (key.keysym.sym)
 	{
 	case SDLK_a:
-		//eyes.x -= 1.0f;
 		camera.ProcessKeyboard(LEFT, deltaTime);
 		break;
 
 	case SDLK_d:
-		//eyes.x += 1.0f;
 		camera.ProcessKeyboard(RIGHT, deltaTime);
 		break;
 
 	case SDLK_w:
-		//eyes.z -= 1.0f;
 		camera.ProcessKeyboard(FORWARD, deltaTime);
 		break;
 
 	case SDLK_s:
-		//eyes.z += 1.0f;
 		camera.ProcessKeyboard(BACKWARD, deltaTime);
 		break;
 
@@ -174,7 +172,7 @@ void handleKeyDown(const SDL_KeyboardEvent& key)
 			nightLampStatus = true;
 		}
 
-		shader.setBool("nightLightStatus", nightLampStatus);
+		shader.setBool("nightLampStatus", nightLampStatus);
 		break;
 
 	}
@@ -276,16 +274,15 @@ bool initGL()
 	shader.setVec3("ceilingLampLight.diffuse", glm::vec3(1.0f, 1.0f, 1.0f));
 	shader.setVec3("ceilingLampLight.position", ceilingLightPosition);
 
-	shader.setVec3("nightLampLight.diffuse", glm::vec3(1, 1, 1));
-	shader.setVec3("nightLampLight.position", nighStandLampLightPosition);
+	shader.setVec3("nightLampLight.diffuse", glm::vec3(1.0f,1.0f,1.0f));
+	shader.setVec3("nightLampLight.position", nightLampLightPosition);
+	shader.setVec3("nightLampLightDirection", nightLampLightDirection);
 
-	//gVertexArrayObjectPyramid = createPyramid();
+	shader.setFloat("nightLampLightCutOff", glm::cos(glm::radians(35.0f)));
+
+	shader.setFloat("nightLampLightOuterCutOff", glm::cos(glm::radians(40.0f)));
 
 	gVertexArrayObjectCube = createCube();
-
-	/*glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);*/
-
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -316,7 +313,6 @@ void render()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 4.0f / 3.0f, 2.0f, 1000.0f);
-	//glm::mat4 view = glm::lookAt(eyes, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 view = camera.GetViewMatrix();
 	glm::mat4 model = glm::mat4(1);
 
@@ -328,21 +324,21 @@ void render()
 
 	drawRoom();
 
+	drawCeilingLight();
+
 	drawBed();
 
 	drawWardrobe();
 
-	drawCeilingLight();
-
 	drawNightStand();
 
-	/*drawNightStandLamp();
+	drawNightStandLamp();
 
 	drawShelfs();
 
 	drawMirrorTable();
 
-	drawWindow();*/
+	//std::cout << glm::to_string(camera.Position) << std::endl;
 
 }
 
@@ -354,15 +350,14 @@ void drawRoom()
 
 	//floor
 	model = glm::mat4(1.0f);
-	model = glm::scale(model, glm::vec3(5, 0.1, 7));
-	model = glm::translate(model, glm::vec3(-1, -5, 0));
+	model = glm::scale(model, glm::vec3(5.0f, 0.1f, 7.0f));
+	model = glm::translate(model, glm::vec3(-1.0f, -5.0f, 0.0f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.412, 0.141, 0.051,1));
-	ambient = glm::vec3(0.25, 0.05, 0);
-	diffuse = glm::vec3(0.5, 0.1, 0.0);
+	ambient = glm::vec3(0.25f, 0.05f, 0.0f);
+	diffuse = glm::vec3(0.5f, 0.1f, 0.0f);
 	setMaterialValues(ambient, diffuse);
 
 	drawCube();
@@ -374,9 +369,8 @@ void drawRoom()
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	//shader.setVec4("color", glm::vec4(0.949, 0.651, 0.502,1));
-	ambient = glm::vec3(0.5, 0.4, 0.35);
-	diffuse = glm::vec3(1, 0.8, 0.7);
+	ambient = glm::vec3(0.5f, 0.4f, 0.35f);
+	diffuse = glm::vec3(1.0f, 0.8f, 0.7f);
 	setMaterialValues(ambient, diffuse);
 
 	drawCube();
@@ -389,7 +383,6 @@ void drawRoom()
 	model = glm::scale(model, glm::vec3(0.2f, 2.0f, 5.0f));
 	model = generateDefaultModelMatrixCube(model);
 
-	//shader.setVec4("color", glm::vec4(0.949, 0.651, 0.502,1));
 	shader.setMat4("model", model);
 	drawCube();
 
@@ -399,7 +392,6 @@ void drawRoom()
 	model = glm::scale(model, glm::vec3(1.0f, 2.0f, 5.0f));
 	model = generateDefaultModelMatrixCube(model);
 
-	//shader.setVec4("color", glm::vec4(0.949, 0.651, 0.502, 1));
 	shader.setMat4("model", model);
 	drawCube();
 
@@ -409,22 +401,20 @@ void drawRoom()
 	model = glm::scale(model, glm::vec3(5.0f, 2.0f, 0.1f));
 	model = generateDefaultModelMatrixCube(model);
 
-	//shader.setVec4("color", glm::vec4(0.949, 0.651, 0.502, 1));
 	shader.setMat4("model", model);
 	drawCube();
 
 
 	//ceiling
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-2, 5.1, 0));
-	model = glm::scale(model, glm::vec3(5, 0.1, 7));
+	model = glm::translate(model, glm::vec3(-2.0f, 5.1f, 0.0f));
+	model = glm::scale(model, glm::vec3(5.0f, 0.1f, 7.0f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.949, 0.651, 0.502, 1));
-	ambient = glm::vec3(0.5, 0.45, 0.4);
-	diffuse = glm::vec3(1.0, 0.9, 0.8);
+	ambient = glm::vec3(0.5f, 0.45f, 0.4f);
+	diffuse = glm::vec3(1.0f, 0.9f, 0.8f);
 
 	setMaterialValues(ambient, diffuse);
 
@@ -438,9 +428,8 @@ void drawRoom()
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.22, 0.173, 0.145, 1.0f));
-	ambient = glm::vec3(0.20, 0.05, 0.0);
-	diffuse = glm::vec3(0.4, 0.1, 0.0);
+	ambient = glm::vec3(0.20f, 0.05f, 0.0f);
+	diffuse = glm::vec3(0.4f, 0.1f, 0.0f);
 
 	setMaterialValues(ambient, diffuse);
 
@@ -461,9 +450,8 @@ void drawBed()
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.502f, 0.38f, 0.149f, 1.0f));
-	ambient = glm::vec3(0.25, 0.1, 0.1);
-	diffuse = glm::vec3(0.5, 0.2, 0.2);
+	ambient = glm::vec3(0.25f, 0.1f, 0.1f);
+	diffuse = glm::vec3(0.5f, 0.2f, 0.2f);
 
 	setMaterialValues(ambient, diffuse);
 
@@ -477,9 +465,8 @@ void drawBed()
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.502f, 0.38f, 0.149f, 1.0f));
-	ambient = glm::vec3(0.412, 0.353, 0.2745);
-	diffuse = glm::vec3(0.824, 0.706, 0.549);
+	ambient = glm::vec3(0.412f, 0.353f, 0.2745f);
+	diffuse = glm::vec3(0.824f, 0.706f, 0.549f);
 
 	setMaterialValues(ambient, diffuse);
 
@@ -494,12 +481,10 @@ void drawBed()
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.729f, 0.278f, 0.031f, 1.0f)); 
-	ambient = glm::vec3(0.3135, 0.161, 0.088);
-	diffuse = glm::vec3(0.627, 0.322, 0.176);
+	ambient = glm::vec3(0.3135f, 0.161f, 0.088f);
+	diffuse = glm::vec3(0.627f, 0.322f, 0.176f);
 
 	setMaterialValues(ambient, diffuse);
-	// Same material values for the next couple elements of the bed
 
 	drawCube();
 
@@ -511,8 +496,6 @@ void drawBed()
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-
-	//shader.setVec4("color", glm::vec4(0.729f, 0.278f, 0.031f, 1.0f));
 	drawCube();
 
 	//blanket
@@ -523,7 +506,6 @@ void drawBed()
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.729f, 0.424f, 0.031f, 1.0f));
 	drawCube();
 
 	//blanket left side
@@ -534,7 +516,6 @@ void drawBed()
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.729f, 0.424f, 0.031f, 1.0f));
 	drawCube();
 
 	//blanket right side
@@ -545,7 +526,6 @@ void drawBed()
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.729f, 0.424f, 0.031f, 1.0f));
 	drawCube();
 }
 
@@ -562,9 +542,8 @@ void drawWardrobe() {
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.5f, 0.2f, 0.2f, 1.0f));
-	ambient = glm::vec3(0.25, 0.1, 0.1);
-	diffuse = glm::vec3(0.5, 0.2, 0.2);
+	ambient = glm::vec3(0.25f, 0.1f, 0.1f);
+	diffuse = glm::vec3(0.5f, 0.2f, 0.2f);
 
 	setMaterialValues(ambient, diffuse);
 
@@ -578,9 +557,8 @@ void drawWardrobe() {
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.2f, 0.1f, 0.1f, 1.0f));
-	ambient = glm::vec3(0.1, 0.05, 0.05);
-	diffuse = glm::vec3(0.2, 0.1, 0.1);
+	ambient = glm::vec3(0.1f, 0.05f, 0.05f);
+	diffuse = glm::vec3(0.2f, 0.1f, 0.1f);
 
 	setMaterialValues(ambient, diffuse);
 	//Same material values for the next couple elements of the wardrobe
@@ -603,7 +581,6 @@ void drawWardrobe() {
 	model = glm::scale(model, glm::vec3(0.5f, 0.01f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
-	//shader.setVec4("color", glm::vec4(0.2f, 0.1f, 0.1f, 1.0f));
 	shader.setMat4("model", model);
 	drawCube();
 
@@ -613,7 +590,6 @@ void drawWardrobe() {
 	model = glm::scale(model, glm::vec3(0.01f, 1.0f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
-	//shader.setVec4("color", glm::vec4(0.2f, 0.1f, 0.1f, 1.0f));
 	shader.setMat4("model", model);
 	drawCube();
 
@@ -623,7 +599,6 @@ void drawWardrobe() {
 	model = glm::scale(model, glm::vec3(0.01f, 0.67f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
-	//shader.setVec4("color", glm::vec4(0.2f, 0.1f, 0.1f, 1.0f));
 	shader.setMat4("model", model);
 	drawCube();
 
@@ -633,7 +608,6 @@ void drawWardrobe() {
 	model = glm::scale(model, glm::vec3(0.01f, 1.0f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
-	//shader.setVec4("color", glm::vec4(0.2f, 0.1f, 0.1f, 1.0f));
 	shader.setMat4("model", model);
 	drawCube();
 
@@ -643,7 +617,6 @@ void drawWardrobe() {
 	model = glm::scale(model, glm::vec3(0.02f, 0.18f, 0.01f));
 	model = generateDefaultModelMatrixCube(model);
 
-	//shader.setVec4("color", glm::vec4(0.2f, 0.1f, 0.1f, 1.0f));
 	shader.setMat4("model", model);
 	drawCube();
 
@@ -653,7 +626,6 @@ void drawWardrobe() {
 	model = glm::scale(model, glm::vec3(0.02f, 0.18f, 0.01f));
 	model = generateDefaultModelMatrixCube(model);
 
-	//shader.setVec4("color", glm::vec4(0.2f, 0.1f, 0.1f, 1.0f));
 	shader.setMat4("model", model);
 	drawCube();
 
@@ -662,8 +634,6 @@ void drawWardrobe() {
 	model = glm::translate(model, glm::vec3(4.5f, 0.7f, 4.8f));
 	model = glm::scale(model, glm::vec3(0.16f, 0.02f, 0.01f));
 	model = generateDefaultModelMatrixCube(model);
-
-	//shader.setVec4("color", glm::vec4(0.2f, 0.1f, 0.1f, 1.0f));
 	shader.setMat4("model", model);
 	drawCube();
 
@@ -674,7 +644,6 @@ void drawWardrobe() {
 	model = glm::scale(model, glm::vec3(0.16f, 0.02f, 0.01f));
 	model = generateDefaultModelMatrixCube(model);
 
-	//shader.setVec4("color", glm::vec4(0.2f, 0.1f, 0.1f, 1.0f));
 	shader.setMat4("model", model);
 	drawCube();
 }
@@ -692,10 +661,8 @@ void drawNightStand() {
 
 	shader.setMat4("model", model);
 
-	//shader.setVec4("color", glm::vec4(0.2, 0.1, 0.1, 1.0));
-
-	ambient = glm::vec3(0.1, 0.05, 0.05);
-	diffuse = glm::vec3(0.2, 0.1, 0.1);
+	ambient = glm::vec3(0.1f, 0.05f, 0.05f);
+	diffuse = glm::vec3(0.2f, 0.1f, 0.1f);
 
 	setMaterialValues(ambient, diffuse);
 
@@ -708,10 +675,9 @@ void drawNightStand() {
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	//shader.setVec4("color", glm::vec4(0.3, 0.2, 0.2, 1.0));
 
-	ambient = glm::vec3(0.15, 0.1, 0.1);
-	diffuse = glm::vec3(0.3, 0.2, 0.2);
+	ambient = glm::vec3(0.15f, 0.1f, 0.1f);
+	diffuse = glm::vec3(0.3f, 0.2f, 0.2f);
 
 	setMaterialValues(ambient, diffuse);
 
@@ -724,10 +690,9 @@ void drawNightStand() {
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	//shader.setVec4("color", glm::vec4(0.3, 0.1, 0.0, 1.0));
 
-	ambient = glm::vec3(0.15, 0.05, 0.0);
-	diffuse = glm::vec3(0.3, 0.1, 0.0);
+	ambient = glm::vec3(0.15f, 0.05f, 0.0f);
+	diffuse = glm::vec3(0.3f, 0.1f, 0.0f);
 
 	setMaterialValues(ambient, diffuse);
 
@@ -742,93 +707,129 @@ void drawShelfs() {
 
 	//middle shelf
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(0.5, 1.9, 3));
-	model = glm::scale(model, glm::vec3(0.4, 0.03, 0.2));
+	model = glm::translate(model, glm::vec3(0.5f, 1.9f, 3.0f));
+	model = glm::scale(model, glm::vec3(0.4f, 0.03f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+
+	ambient = glm::vec3(0.1f, 0.05f, 0.05f);
+	diffuse = glm::vec3(0.2f, 0.1f, 0.1f);
+
+	setMaterialValues(ambient, diffuse);
+	//Same material values for the next couple elements of shelfs
+
 	drawCube();
 
 	//top shelf
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(1, 2.3, 3));
-	model = glm::scale(model, glm::vec3(0.4, 0.03, 0.2));
+	model = glm::translate(model, glm::vec3(1.0f, 2.3f, 3.0f));
+	model = glm::scale(model, glm::vec3(0.4f, 0.03f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+
 	drawCube();
 
 	//bottom shelf
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(1, 1.5, 3));
-	model = glm::scale(model, glm::vec3(0.4, 0.03, 0.2));
+	model = glm::translate(model, glm::vec3(1.0f, 1.5f, 3.0f));
+	model = glm::scale(model, glm::vec3(0.4f, 0.03f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+
 	drawCube();
 
 
 	//item 1 on middle shelf
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(0.5, 1.9, 3));
-	model = glm::scale(model, glm::vec3(0.05, 0.16, 0.01));
+	model = glm::translate(model, glm::vec3(0.5f, 1.9f, 3.0f));
+	model = glm::scale(model, glm::vec3(0.05f, 0.16f, 0.01f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.4315, 0.039, 0.1175, 1.0));
+
+	ambient = glm::vec3(0.4315f, 0.039f, 0.1175f);
+	diffuse = glm::vec3(0.863f, 0.078f, 0.235f);
+
+	setMaterialValues(ambient, diffuse);
+
 	drawCube();
 
 	//item 2 on middle shelf
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(0.8, 1.9, 3));
-	model = glm::scale(model, glm::vec3(0.05, 0.12, 0.01));
+	model = glm::translate(model, glm::vec3(0.8f, 1.9f, 3.0f));
+	model = glm::scale(model, glm::vec3(0.05f, 0.12f, 0.01f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.39, 0.041, 0.261, 1.0));
+
+	ambient = glm::vec3(0.39f, 0.041f, 0.261f);
+	diffuse = glm::vec3(0.780f, 0.082f, 0.522f);
+
+	setMaterialValues(ambient, diffuse);
+
 	drawCube();
 
 	//item 1 on top shelf
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(1.11, 2.3, 3.1));
-	model = glm::scale(model, glm::vec3(0.16, 0.1, 0.1));
+	model = glm::translate(model, glm::vec3(1.11f, 2.3f, 3.1f));
+	model = glm::scale(model, glm::vec3(0.16f, 0.1f, 0.1f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.502, 0.502, 0.000, 1.0));
+
+	ambient = glm::vec3(0.502f, 0.502f, 0.0f);
+	diffuse = glm::vec3(0.416f, 0.353f, 0.804f);
+
+	setMaterialValues(ambient, diffuse);
+	
 	drawCube();
 
 	//item 2 on top shelf lower part
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(2, 2.31, 3));
-	model = glm::scale(model, glm::vec3(0.04, 0.06, 0.2));
+	model = glm::translate(model, glm::vec3(2.0f, 2.31f, 3.0f));
+	model = glm::scale(model, glm::vec3(0.04f, 0.06f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.39, 0.041, 0.261, 1.0));
+
+	ambient = glm::vec3(0.39f, 0.041f, 0.261f);
+	diffuse = glm::vec3(0.780f, 0.082f, 0.522f);
+	
+	setMaterialValues(ambient, diffuse);
+
 	drawCube();
 
 	//item 2 on top shelf upper part
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(2.01, 2.46, 3));
-	model = glm::scale(model, glm::vec3(0.01, 0.05, 0.2));
+	model = glm::translate(model, glm::vec3(2.01f, 2.46f, 3.0f));
+	model = glm::scale(model, glm::vec3(0.01f, 0.05f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.2645, 0.404, 0.49, 1.0));
+
+	ambient = glm::vec3(0.2645f, 0.404f, 0.49f);
+	diffuse = glm::vec3(0.529f, 0.808f, 0.98f);
+
+	setMaterialValues(ambient, diffuse);
+
 	drawCube();
 
-	//item 1 on the bottom shelf	1, 1.5, 3
+	//item 1 on the bottom shelf
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(1.8, 1.5, 3));
-	model = glm::scale(model, glm::vec3(0.09, 0.10, 0.2));
+	model = glm::translate(model, glm::vec3(1.8f, 1.5f, 3.0f));
+	model = glm::scale(model, glm::vec3(0.09f, 0.1f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.349, 0.65, 0.065, 1.0));
+
+	ambient = glm::vec3(0.349f, 0.65f, 0.065f);
+	diffuse = glm::vec3(0.698f, 0.133f, 0.133f);
+
+	setMaterialValues(ambient, diffuse);
+
 	drawCube();
 }
 
@@ -839,139 +840,156 @@ void drawMirrorTable() {
 
 	//left drawer
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(5.9, 0, 4.6));
-	model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+	model = glm::translate(model, glm::vec3(5.9f, 0.0f, 4.6f));
+	model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.2725, 0.1355, 0.0375, 1.0));
+
+	ambient = glm::vec3(0.2725f, 0.1355f, 0.0375f);
+	diffuse = glm::vec3(0.545f, 0.271f, 0.075f);
+
+	setMaterialValues(ambient, diffuse);
+	//Same material values for the next couple elements of the mirrorTable
 
 	drawCube();
 
 	//right drawer
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(7, 0, 4.6));
-	model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+	model = glm::translate(model, glm::vec3(7.0f, 0.0f, 4.6f));
+	model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.2725, 0.1355, 0.0375, 1.0));
+
 	drawCube();
 
 	//middle drawer
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(5.9, 0.6, 4.6));
-	model = glm::scale(model, glm::vec3(0.57, 0.1, 0.2));
+	model = glm::translate(model, glm::vec3(5.9f, 0.6f, 4.6f));
+	model = glm::scale(model, glm::vec3(0.57f, 0.1f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.2725, 0.1355, 0.0375, 1.0));
+
 	drawCube();
 
 	//middle drawer bottom stripe
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(5.9, 0.6, 5.2));
-	model = glm::scale(model, glm::vec3(0.57, 0.01, 0.0001));
+	model = glm::translate(model, glm::vec3(5.9f, 0.6f, 5.2f));
+	model = glm::scale(model, glm::vec3(0.57f, 0.01f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+
+	ambient = glm::vec3(0.1f, 0.05f, 0.05f);
+	diffuse = glm::vec3(0.2f, 0.1f, 0.1f);
+
+	setMaterialValues(ambient, diffuse);
+	//Same material values for the next couple elements of the mirrorTable
 	drawCube();
 
 	//middle drawer top stripe
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(5.9, 0.9, 5.2));
-	model = glm::scale(model, glm::vec3(0.57, 0.01, 0.0001));
+	model = glm::translate(model, glm::vec3(5.9f, 0.9f, 5.2f));
+	model = glm::scale(model, glm::vec3(0.57f, 0.01f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+
 	drawCube();
 
 	//middle drawer handle
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.5, 0.75, 5.2));
-	model = glm::scale(model, glm::vec3(0.16, 0.02, 0.0001));
+	model = glm::translate(model, glm::vec3(6.5f, 0.75f, 5.2f));
+	model = glm::scale(model, glm::vec3(0.16f, 0.02f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+
 	drawCube();
 
 	//left body handle
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.4, 0.1, 5.2));
-	model = glm::scale(model, glm::vec3(0.02, 0.13, 0.0001));
+	model = glm::translate(model, glm::vec3(6.4f, 0.1f, 5.2f));
+	model = glm::scale(model, glm::vec3(0.02f, 0.13f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+
 	drawCube();
 
 	//right body handle
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(7.1, 0.1, 5.2));
-	model = glm::scale(model, glm::vec3(0.02, 0.13, 0.0001));
+	model = glm::translate(model, glm::vec3(7.1f, 0.1f, 5.2f));
+	model = glm::scale(model, glm::vec3(0.02f, 0.13f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
-	drawCube();
 
-	// mirror
-	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.2, 0.9, 4.7));
-	model = glm::scale(model, glm::vec3(0.36, 0.5, 0.0001));
-	model = generateDefaultModelMatrixCube(model);
-
-	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.345, 0.439, 0.451, 10.0));
 	drawCube();
 
 	//mirror left stripe
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.17, 0.9, 4.71));
-	model = glm::scale(model, glm::vec3(0.019, 0.49, 0.0001));
+	model = glm::translate(model, glm::vec3(6.17f, 0.9f, 4.71f));
+	model = glm::scale(model, glm::vec3(0.019f, 0.49f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+
 	drawCube();
 
 	//mirror right stripe
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(7.25, 0.9, 4.71));
-	model = glm::scale(model, glm::vec3(0.019, 0.49, 0.0001));
+	model = glm::translate(model, glm::vec3(7.25f, 0.9f, 4.71f));
+	model = glm::scale(model, glm::vec3(0.019f, 0.49f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+	
 	drawCube();
 
 	//mirror bottom stripe 
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.17, 0.9, 4.71));
-	model = glm::scale(model, glm::vec3(0.36, 0.019, 0.0001));
+	model = glm::translate(model, glm::vec3(6.17f, 0.9f, 4.71f));
+	model = glm::scale(model, glm::vec3(0.36f, 0.019f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+
 	drawCube();
 
 	//mirror top stripe
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.17, 2.35, 4.71));
-	model = glm::scale(model, glm::vec3(0.379, 0.019, 0.0001));
+	model = glm::translate(model, glm::vec3(6.17f, 2.35f, 4.71f));
+	model = glm::scale(model, glm::vec3(0.379f, 0.019f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0.1, 0.05, 0.05, 1.0));
+
 	drawCube();
 
+	// mirror
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(6.2f, 0.9f, 4.7f));
+	model = glm::scale(model, glm::vec3(0.36f, 0.5f, 0.0001f));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+
+	ambient = glm::vec3(0.345f, 0.439f, 0.451f);
+	diffuse = glm::vec3(0.690f, 0.878f, 0.902f);
+
+	float shinines = 50.0f;
+	setMaterialValues(ambient, diffuse,glm::vec3(0,0,0), shinines);
+
+	drawCube();
 }
 
 void drawNightStandLamp() {
 	glm::mat4 model;
+	glm::vec3 ambient;
+	glm::vec3 diffuse;
 
 	//lamp base
 	model = glm::mat4(1);
@@ -980,7 +998,12 @@ void drawNightStandLamp() {
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0, 0, 1, 1.0));
+
+	ambient = glm::vec3(0.0f, 0.0f, 0.5f);
+	diffuse = glm::vec3(0.0f, 0.0f, 1.0f);
+
+	setMaterialValues(ambient, diffuse);
+
 	drawCube();
 
 	//stand
@@ -990,7 +1013,12 @@ void drawNightStandLamp() {
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(1, 1, 1, 1.0));
+
+	ambient = glm::vec3(0.8f,0.8f,0.8f);
+	diffuse = glm::vec3(1.0f, 1.0f, 1.0f);
+
+	setMaterialValues(ambient, diffuse);
+
 	drawCube();
 
 	//shade
@@ -1000,7 +1028,17 @@ void drawNightStandLamp() {
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
-	shader.setVec4("color", glm::vec4(0, 0, 0.545, 1.0));
+
+	ambient = glm::vec3(0.0f, 0.0f, 0.2725f);
+	diffuse = glm::vec3(0.0f, 0.0f, 0.545f);
+	glm::vec3 emission = glm::vec3(0.0f, 0.0f, 0.0f);
+
+	if (nightLampStatus) {
+		emission = glm::vec3(0.0f, 0.0f, 0.5f);
+	}
+
+	setMaterialValues(ambient, diffuse, emission);
+
 	drawCube();
 
 }
@@ -1009,10 +1047,8 @@ void drawCeilingLight() {
 	glm::mat4 model = glm::mat4(1);
 
 	model = glm::translate(model, glm::vec3(5.0f, 5.0f, 6.5f));
-	model = glm::scale(model, glm::vec3(0.3, 0.03, 0.3));
+	model = glm::scale(model, glm::vec3(0.3f, 0.03f, 0.3f));
 	model = generateDefaultModelMatrixCube(model);
-
-	//shader.setVec4("color", glm::vec4(0.7f, 0.7f, 0.7f, 1.0f));
 
 	glm::vec3 ambient = glm::vec3(0.7f, 0.7f, 0.7f);
 	glm::vec3 diffuse = glm::vec3(1.0f, 0.843f, 0.0f);
@@ -1025,6 +1061,7 @@ void drawCeilingLight() {
 	setMaterialValues(ambient, diffuse, emission);
 
 	shader.setMat4("model", model);
+
 	drawCube();
 }
 
@@ -1120,13 +1157,13 @@ glm::mat4 generateDefaultModelMatrixCube(glm::mat4 model)
 	return model;
 }
 
-void setMaterialValues(glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 emission) {
+void setMaterialValues(glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 emission, float shininess) {
 
 	shader.setVec3("fragMaterial.ambient", ambient);
 	shader.setVec3("fragMaterial.diffuse", diffuse);
 	shader.setVec3("fragMaterial.emission", emission);
-	shader.setVec3("fragMaterial.specular", 1, 1, 1);
-	shader.setFloat("fragMaterial.shininess", 0.2f * 128);
+	shader.setVec3("fragMaterial.specular", 1.0f, 1.0f, 1.0f);
+	shader.setFloat("fragMaterial.shininess", shininess);
 
 	shader.setFloat("fragMaterial.ka", 1.0f);
 	shader.setFloat("fragMaterial.kd", 1.0f);
