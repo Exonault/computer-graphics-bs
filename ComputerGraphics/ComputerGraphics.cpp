@@ -9,9 +9,6 @@
 #include "glm/ext.hpp"
 #include "glm/gtx/string_cast.hpp"
 
-#define STD_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 
 /*
  Function definition
@@ -43,18 +40,17 @@ void drawCube();
 
 //helper functions
 glm::mat4 generateDefaultModelMatrixCube(glm::mat4);
-void setMaterialValues(glm::vec3, glm::vec3, glm::vec3 = glm::vec3(0.0f,0.0f,0.0f), float = 0.2f * 128);
+void setMaterialValues(glm::vec3, glm::vec3, glm::vec3 = glm::vec3(0.0f, 0.0f, 0.0f), float = 0.2f * 128);
 
 SDL_Window* gWindow = NULL;
 SDL_GLContext gContext;
-GLuint gVertexArrayObjectPyramid;
 GLuint gVertexArrayObjectCube;
 
 Shader shader;
 
-const glm::vec3 eyes = glm::vec3(4.0f, 2.0f, 13.75f);
+const glm::vec3 eyes = glm::vec3(4.0f, 2.0f, 13.0f);
 
-const glm::vec3 ceilingLightPosition = glm::vec3(5.5f, 5.0f, 7.0f);
+const glm::vec3 ceilingLightPosition = glm::vec3(5.5f, 5.0f, 8.0f);
 const glm::vec3 nightLampLightPosition = glm::vec3(0.7f, 1.1f, 9.0f);
 
 const glm::vec3 nightLampLightDirection = glm::vec3(0.3f, -1.0f, -0.8f);
@@ -76,6 +72,20 @@ int main(int argc, char* args[])
 	init();
 	SDL_Event event;
 	bool quit = false;
+
+	std::cout << "Press W for moving forward" << std::endl;
+	std::cout << "Press A for moving left" << std::endl;
+	std::cout << "Press S for moving backwards" << std::endl;
+	std::cout << "Press D for moving right" << std::endl;
+	std::cout << std::endl;
+	std::cout << "Press Q to reset the camera" << std::endl;
+	std::cout << std::endl;
+	std::cout << "Press 1 for ceiling lamp" << std::endl;
+	std::cout << "Press 2 for night stand lamp" << std::endl;
+	std::cout << std::endl;
+	std::cout << "Use mouse scroll to zoom in and out" << std::endl;
+	std::cout << "Use mouse movement to change the view angle" << std::endl;
+
 	while (!quit)
 	{
 
@@ -95,6 +105,7 @@ int main(int argc, char* args[])
 			case SDL_QUIT:
 				quit = true;
 				break;
+
 			case SDL_KEYDOWN:
 				if (event.key.keysym.sym == SDLK_ESCAPE)
 				{
@@ -105,9 +116,11 @@ int main(int argc, char* args[])
 					handleKeyDown(event.key);
 				}
 				break;
+
 			case SDL_MOUSEMOTION:
 				handleMouseMotion(event.motion);
 				break;
+
 			case SDL_MOUSEWHEEL:
 				handleMouseWheel(event.wheel);
 				break;
@@ -213,7 +226,7 @@ bool init()
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 
-		gWindow = SDL_CreateWindow("3D room", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+		gWindow = SDL_CreateWindow("3D room", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 
 		if (gWindow == NULL)
 		{
@@ -274,7 +287,7 @@ bool initGL()
 	shader.setVec3("ceilingLampLight.diffuse", glm::vec3(1.0f, 1.0f, 1.0f));
 	shader.setVec3("ceilingLampLight.position", ceilingLightPosition);
 
-	shader.setVec3("nightLampLight.diffuse", glm::vec3(1.0f,1.0f,1.0f));
+	shader.setVec3("nightLampLight.diffuse", glm::vec3(1.0f, 1.0f, 1.0f));
 	shader.setVec3("nightLampLight.position", nightLampLightPosition);
 	shader.setVec3("nightLampLightDirection", nightLampLightDirection);
 
@@ -298,7 +311,7 @@ void close()
 {
 	glDeleteProgram(shader.ID);
 
-	glDeleteVertexArrays(1, &gVertexArrayObjectPyramid);
+	glDeleteVertexArrays(1, &gVertexArrayObjectCube);
 
 	SDL_GL_DeleteContext(gContext);
 
@@ -312,7 +325,7 @@ void render()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 4.0f / 3.0f, 2.0f, 1000.0f);
+	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 16.0f/9.0f, 2.0f, 1000.0f);
 	glm::mat4 view = camera.GetViewMatrix();
 	glm::mat4 model = glm::mat4(1);
 
@@ -334,7 +347,7 @@ void render()
 
 	drawNightStandLamp();
 
-	drawShelfs();
+    drawShelfs();
 
 	drawMirrorTable();
 
@@ -364,7 +377,7 @@ void drawRoom()
 
 	//front wall
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-1.5f, -1.0f, 0.5f));
+	model = glm::translate(model, glm::vec3(-1.5f, -1.0f, 2.2f));
 	model = glm::scale(model, glm::vec3(5.0f, 2.0f, 0.1f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -380,7 +393,7 @@ void drawRoom()
 	//right wall
 	model = glm::mat4(1.0f);
 	model = glm::translate(model, glm::vec3(9.0f, -1.0f, 0.0f));
-	model = glm::scale(model, glm::vec3(0.2f, 2.0f, 5.0f));
+	model = glm::scale(model, glm::vec3(0.2f, 2.0f, 5.5f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
@@ -389,7 +402,7 @@ void drawRoom()
 	//left wall
 	model = glm::mat4(1.0f);
 	model = glm::translate(model, glm::vec3(-4.5f, -1.0f, 0.0f));
-	model = glm::scale(model, glm::vec3(1.0f, 2.0f, 5.0f));
+	model = glm::scale(model, glm::vec3(1.0f, 2.0f, 5.5f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
@@ -397,7 +410,7 @@ void drawRoom()
 
 	//back wall
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-1.5f, -1.0f, 14.5f));
+	model = glm::translate(model, glm::vec3(-1.5f, -1.0f, 16.0f));
 	model = glm::scale(model, glm::vec3(5.0f, 2.0f, 0.1f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -536,7 +549,7 @@ void drawWardrobe() {
 
 	//wardrobe body
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(4.0f, 0.0f, 3.3f));
+	model = glm::translate(model, glm::vec3(6.5f, 0.0f, 3.6f));
 	model = glm::scale(model, glm::vec3(0.5f, 1.0f, 0.5f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -551,7 +564,7 @@ void drawWardrobe() {
 
 	//vertical stripline
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(4.0f, 1.0f, 4.8f));
+	model = glm::translate(model, glm::vec3(6.5f, 1.0f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.5f, 0.01f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -567,7 +580,7 @@ void drawWardrobe() {
 
 	//vertical stripline
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(4.0f, 0.5f, 4.8f));
+	model = glm::translate(model, glm::vec3(6.5f, 0.5f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.5f, 0.01f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -577,17 +590,8 @@ void drawWardrobe() {
 
 	//vertical stripline
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(4.0f, 0.0f, 4.8f));
+	model = glm::translate(model, glm::vec3(6.5f, 0.0f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.5f, 0.01f, 0.0001f));
-	model = generateDefaultModelMatrixCube(model);
-
-	shader.setMat4("model", model);
-	drawCube();
-
-	//horizontal stripline
-	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(5.5f, 0.0f, 4.8f));
-	model = glm::scale(model, glm::vec3(0.01f, 1.0f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
 	shader.setMat4("model", model);
@@ -595,7 +599,16 @@ void drawWardrobe() {
 
 	//right side horizontal stripline
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(4.75f, 1.0f, 4.8f));
+	model = glm::translate(model, glm::vec3(8.0f, 0.0f, 5.11f));
+	model = glm::scale(model, glm::vec3(0.01f, 1.0f, 0.0001f));
+	model = generateDefaultModelMatrixCube(model);
+
+	shader.setMat4("model", model);
+	drawCube();
+
+	//left side horizontal stripline
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(7.25f, 1.0f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.01f, 0.67f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -604,7 +617,7 @@ void drawWardrobe() {
 
 	//left side horizontal stripline
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(4.0f, 0.0f, 4.8f));
+	model = glm::translate(model, glm::vec3(6.5f, 0.0f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.01f, 1.0f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -613,7 +626,7 @@ void drawWardrobe() {
 
 	//right handle
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(5.0f, 1.4f, 4.8f));
+	model = glm::translate(model, glm::vec3(7.5f, 1.4f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.02f, 0.18f, 0.01f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -622,7 +635,7 @@ void drawWardrobe() {
 
 	//left handle
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(4.5f, 1.4f, 4.8f));
+	model = glm::translate(model, glm::vec3(7.0f, 1.4f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.02f, 0.18f, 0.01f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -631,7 +644,7 @@ void drawWardrobe() {
 
 	//drawer handle 1
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(4.5f, 0.7f, 4.8f));
+	model = glm::translate(model, glm::vec3(7.0f, 0.7f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.16f, 0.02f, 0.01f));
 	model = generateDefaultModelMatrixCube(model);
 	shader.setMat4("model", model);
@@ -640,7 +653,7 @@ void drawWardrobe() {
 
 	//drawer handle 2
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(4.5f, 0.25f, 4.8f));
+	model = glm::translate(model, glm::vec3(7.0f, 0.25f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.16f, 0.02f, 0.01f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -784,7 +797,7 @@ void drawShelfs() {
 	diffuse = glm::vec3(0.416f, 0.353f, 0.804f);
 
 	setMaterialValues(ambient, diffuse);
-	
+
 	drawCube();
 
 	//item 2 on top shelf lower part
@@ -797,7 +810,7 @@ void drawShelfs() {
 
 	ambient = glm::vec3(0.39f, 0.041f, 0.261f);
 	diffuse = glm::vec3(0.780f, 0.082f, 0.522f);
-	
+
 	setMaterialValues(ambient, diffuse);
 
 	drawCube();
@@ -840,7 +853,7 @@ void drawMirrorTable() {
 
 	//left drawer
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(5.9f, 0.0f, 4.6f));
+	model = glm::translate(model, glm::vec3(4.5f, 0.0f, 4.6f));
 	model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -856,7 +869,7 @@ void drawMirrorTable() {
 
 	//right drawer
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(7.0f, 0.0f, 4.6f));
+	model = glm::translate(model, glm::vec3(5.6f, 0.0f, 4.6f));
 	model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -866,7 +879,7 @@ void drawMirrorTable() {
 
 	//middle drawer
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(5.9f, 0.6f, 4.6f));
+	model = glm::translate(model, glm::vec3(4.5f, 0.6f, 4.6f));
 	model = glm::scale(model, glm::vec3(0.57f, 0.1f, 0.2f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -876,7 +889,7 @@ void drawMirrorTable() {
 
 	//middle drawer bottom stripe
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(5.9f, 0.6f, 5.2f));
+	model = glm::translate(model, glm::vec3(4.5f, 0.6f, 5.2f));
 	model = glm::scale(model, glm::vec3(0.57f, 0.01f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -891,7 +904,7 @@ void drawMirrorTable() {
 
 	//middle drawer top stripe
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(5.9f, 0.9f, 5.2f));
+	model = glm::translate(model, glm::vec3(4.5f, 0.9f, 5.2f));
 	model = glm::scale(model, glm::vec3(0.57f, 0.01f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -901,7 +914,7 @@ void drawMirrorTable() {
 
 	//middle drawer handle
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.5f, 0.75f, 5.2f));
+	model = glm::translate(model, glm::vec3(5.1f, 0.75f, 5.2f));
 	model = glm::scale(model, glm::vec3(0.16f, 0.02f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -911,7 +924,7 @@ void drawMirrorTable() {
 
 	//left body handle
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.4f, 0.1f, 5.2f));
+	model = glm::translate(model, glm::vec3(5.0f, 0.1f, 5.2f));
 	model = glm::scale(model, glm::vec3(0.02f, 0.13f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -921,7 +934,7 @@ void drawMirrorTable() {
 
 	//right body handle
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(7.1f, 0.1f, 5.2f));
+	model = glm::translate(model, glm::vec3(5.7f, 0.1f, 5.2f));
 	model = glm::scale(model, glm::vec3(0.02f, 0.13f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -931,7 +944,7 @@ void drawMirrorTable() {
 
 	//mirror left stripe
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.17f, 0.9f, 4.71f));
+	model = glm::translate(model, glm::vec3(4.77f, 0.9f, 4.71f));
 	model = glm::scale(model, glm::vec3(0.019f, 0.49f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -939,9 +952,10 @@ void drawMirrorTable() {
 
 	drawCube();
 
+
 	//mirror right stripe
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(7.25f, 0.9f, 4.71f));
+	model = glm::translate(model, glm::vec3(5.85f, 0.9f, 4.71f));
 	model = glm::scale(model, glm::vec3(0.019f, 0.49f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -951,7 +965,7 @@ void drawMirrorTable() {
 
 	//mirror bottom stripe 
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.17f, 0.9f, 4.71f));
+	model = glm::translate(model, glm::vec3(4.77f, 0.9f, 4.71f));
 	model = glm::scale(model, glm::vec3(0.36f, 0.019f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -961,7 +975,7 @@ void drawMirrorTable() {
 
 	//mirror top stripe
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.17f, 2.35f, 4.71f));
+	model = glm::translate(model, glm::vec3(4.77f, 2.35f, 4.71f));
 	model = glm::scale(model, glm::vec3(0.379f, 0.019f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -971,7 +985,7 @@ void drawMirrorTable() {
 
 	// mirror
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(6.2f, 0.9f, 4.7f));
+	model = glm::translate(model, glm::vec3(4.8f, 0.9f, 4.7f));
 	model = glm::scale(model, glm::vec3(0.36f, 0.5f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
@@ -1014,7 +1028,7 @@ void drawNightStandLamp() {
 
 	shader.setMat4("model", model);
 
-	ambient = glm::vec3(0.8f,0.8f,0.8f);
+	ambient = glm::vec3(0.8f, 0.8f, 0.8f);
 	diffuse = glm::vec3(1.0f, 1.0f, 1.0f);
 
 	setMaterialValues(ambient, diffuse);
@@ -1046,7 +1060,7 @@ void drawNightStandLamp() {
 void drawCeilingLight() {
 	glm::mat4 model = glm::mat4(1);
 
-	model = glm::translate(model, glm::vec3(5.0f, 5.0f, 6.5f));
+	model = glm::translate(model, glm::vec3(5.0f, 5.0f, 7.5f));
 	model = glm::scale(model, glm::vec3(0.3f, 0.03f, 0.3f));
 	model = generateDefaultModelMatrixCube(model);
 
