@@ -562,7 +562,7 @@ void drawWardrobe() {
 
 	drawCube();
 
-	//vertical stripline
+	// top vertical stripline
 	model = glm::mat4(1);
 	model = glm::translate(model, glm::vec3(6.5f, 1.0f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.5f, 0.01f, 0.0001f));
@@ -578,7 +578,7 @@ void drawWardrobe() {
 
 	drawCube();
 
-	//vertical stripline
+	//middle vertical stripline
 	model = glm::mat4(1);
 	model = glm::translate(model, glm::vec3(6.5f, 0.5f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.5f, 0.01f, 0.0001f));
@@ -588,7 +588,7 @@ void drawWardrobe() {
 	shader.setMat4("model", model);
 	drawCube();
 
-	//vertical stripline
+	//bottom vertical stripline
 	model = glm::mat4(1);
 	model = glm::translate(model, glm::vec3(6.5f, 0.0f, 5.11f));
 	model = glm::scale(model, glm::vec3(0.5f, 0.01f, 0.0001f));
@@ -599,7 +599,7 @@ void drawWardrobe() {
 
 	//right side horizontal stripline
 	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(8.0f, 0.0f, 5.11f));
+	model = glm::translate(model, glm::vec3(8.0f, 0.0f, 5.1f));
 	model = glm::scale(model, glm::vec3(0.01f, 1.0f, 0.0001f));
 	model = generateDefaultModelMatrixCube(model);
 
