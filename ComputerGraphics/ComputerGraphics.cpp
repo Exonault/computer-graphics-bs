@@ -78,7 +78,7 @@ int main(int argc, char* args[])
 	std::cout << "Press S for moving backwards" << std::endl;
 	std::cout << "Press D for moving right" << std::endl;
 	std::cout << std::endl;
-	std::cout << "Press Q to reset the camera" << std::endl;
+	std::cout << "Press R to reset the camera" << std::endl;
 	std::cout << std::endl;
 	std::cout << "Press 1 for ceiling lamp" << std::endl;
 	std::cout << "Press 2 for night stand lamp" << std::endl;
@@ -159,7 +159,7 @@ void handleKeyDown(const SDL_KeyboardEvent& key)
 		camera.ProcessKeyboard(BACKWARD, deltaTime);
 		break;
 
-	case SDLK_q:
+	case SDLK_r:
 		camera = Camera(eyes);
 		break;
 
